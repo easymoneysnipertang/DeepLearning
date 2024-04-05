@@ -74,5 +74,9 @@ Validation set: Average loss: 0.0708, Accuracy: 9799/10000 (98%)
 
 ## MLP-Mixer
 <!-- https://github.com/jaketae/mlp-mixer/tree/master -->
+MLP-Mixer的网络结构如下：
+<center>
+<img src="../res/mlp_mixer_model.png" width="500">
+</center>
 
 ## 总结
