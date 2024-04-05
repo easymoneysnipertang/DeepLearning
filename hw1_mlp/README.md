@@ -21,7 +21,7 @@ Net(
 <img src="../res/mlp_base_result.png" width="600">
 </center>
 
-可以看到，经过十轮迭代，在模型准确率在97%左右。
+可以看到，经过十轮迭代，模型准确率在97%左右。
 
 
 ## 调整MLP参数
@@ -73,6 +73,14 @@ Validation set: Average loss: 0.0762, Accuracy: 9777/10000 (98%)
 Validation set: Average loss: 0.0708, Accuracy: 9799/10000 (98%)
 ```
 
+将模型错误分类的结果进行打印。  
+可以看到，排除掉一些连人类都无法分辨的图片外，还有很多图片可以较明显地进行分类。证明模型还有提升空间，可以考虑进一步增加神经元数量等，但同时不可避免会受到MLP模型本身缺陷的制约，需要使用更多强大的模块。
+
+<center>
+<img src="../res/mlp_wrong_label.png" width="600">
+</center>
+
+
 ## MLP-Mixer
 <!-- https://github.com/jaketae/mlp-mixer/tree/master -->
 
@@ -84,7 +92,7 @@ MLP-Mixer的网络结构如下图所示：
 1. 模型首先将图片拆分成多个patch
 2. 而后使用一个全连接网络对每个patch进行处理，提取出token
 3. 接着经过N个Mixer层，提取特征信息
-4. 最后使用一个全连接层输出最终的分类结果。
+4. 最后使用一个全连接层输出最终的分类结果
 
 核心的Mixer结构主要由两个部分组成：Channel Mixing和Token Mixing。 
 ```python
@@ -116,9 +124,28 @@ class MixerBlock(nn.Module):
 ```
 
 channel mixing作用于行，也就是在一个token内部，提取不同channel之间的信息。  
-token mixing作用于列，提取不同token之间的信息。
+token mixing作用于列，提取不同token之间的信息。  
+Mixer模块不只是MLP模块的简单堆叠，在进入MLP模块之前，会进行**LayerNorm**操作，并且在MLP模块之后，还会进行**skip connection**操作。
 
 用于信息提取的MLP模块由两个全连接层和一个GELU激活函数组成。MLP模块保证了输入和输出的维度不变。  
+```python
+class MlpBlock(nn.Module):
+    '''
+    dim: 输入输出维度, hidden_dim: 隐藏层维度
+    '''
+    def __init__(self, dim, hidden_dim, dropout = 0.):
+        super().__init__()
+        # 两层全连接层+GELU，输入输出维度都是dim
+        self.net = nn.Sequential(
+            nn.Linear(dim, hidden_dim),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, dim),
+            nn.Dropout(dropout)
+        )
+    def forward(self, x):
+        return self.net(x)
+```
 
 设置如下的模型参数进行训练，得到的最终准确率为97.8%。
 ```python
