@@ -26,7 +26,7 @@ Net(
 
 ## 调整MLP参数
 ### 调整优化器
-将学习率调整到0.02，模型准确率稳步提高，最终达到97.5%。以下为最后几轮的训练结果：  
+将学习率调整到0.02，模型**准确率稳步提高**，最终达到97.5%。以下为最后几轮的训练结果：  
 ```python
 Validation set: Average loss: 0.0899, Accuracy: 9726/10000 (97%)
 Validation set: Average loss: 0.0836, Accuracy: 9751/10000 (98%)
@@ -34,7 +34,7 @@ Validation set: Average loss: 0.0785, Accuracy: 9750/10000 (98%)
 Validation set: Average loss: 0.0766, Accuracy: 9755/10000 (98%)
 ```
 
-将学习率调整为0.03，模型可以更快到达较高的准确率，但是在后期会出现震荡，最终准确率同样为97.5%。以下为最后几轮的训练结果：  
+将学习率调整为0.03，模型可以**更快到达较高的准确率，但是在后期会出现震荡**，最终准确率同样为97.5%。以下为最后几轮的训练结果：  
 ```python
 Validation set: Average loss: 0.0844, Accuracy: 9743/10000 (97%)
 Validation set: Average loss: 0.0758, Accuracy: 9768/10000 (98%)
@@ -57,7 +57,8 @@ MyNet(
 )
 ```
 
-仅调整模型结构后的训练结果如下，最终准确率同样为97.5%。  
+调整模型结构后，因为宽度和深度都进行变大，模型需要**训练的参数变多，模型训练时间变长**。  
+但更多的参数带来了更好的拟合能力，最终准确率为97.5%，训练完整结果如下：  
 <center>
 <img src="../res/mlp_change_result.png" width="600">
 </center>
@@ -74,9 +75,65 @@ Validation set: Average loss: 0.0708, Accuracy: 9799/10000 (98%)
 
 ## MLP-Mixer
 <!-- https://github.com/jaketae/mlp-mixer/tree/master -->
-MLP-Mixer的网络结构如下：
+
+MLP-Mixer的网络结构如下图所示：
 <center>
 <img src="../res/mlp_mixer_model.png" width="500">
 </center>
 
-## 总结
+1. 模型首先将图片拆分成多个patch
+2. 而后使用一个全连接网络对每个patch进行处理，提取出token
+3. 接着经过N个Mixer层，提取特征信息
+4. 最后使用一个全连接层输出最终的分类结果。
+
+核心的Mixer结构主要由两个部分组成：Channel Mixing和Token Mixing。 
+```python
+class MixerBlock(nn.Module):
+    '''
+    dim: patch的维度(channles), num_patch: patch的数量(patches)
+    token_dim: token-mix的隐藏层维度, channel_dim: channel-mix的隐藏层维度
+    '''
+    def __init__(self, dim, num_patch, token_dim, channel_dim, dropout = 0.):
+        super().__init__()
+        # token_mixing，在同一维度上各个patch/token间进行mixing
+        self.token_mix = nn.Sequential(
+            nn.LayerNorm(dim),  
+            Rearrange('b n d -> b d n'),  # 转置
+            MlpBlock(num_patch, token_dim, dropout),
+            Rearrange('b d n -> b n d')  # 转置回来
+        )
+        # channel_mixing，在每个patch/token的各个维度上进行mixing
+        self.channel_mix = nn.Sequential(
+            nn.LayerNorm(dim),
+            MlpBlock(dim, channel_dim, dropout),
+        )
+
+    def forward(self, x):
+        # skip connection
+        x = x + self.token_mix(x)
+        x = x + self.channel_mix(x)
+        return x
+```
+
+channel mixing作用于行，也就是在一个token内部，提取不同channel之间的信息。  
+token mixing作用于列，提取不同token之间的信息。
+
+用于信息提取的MLP模块由两个全连接层和一个GELU激活函数组成。MLP模块保证了输入和输出的维度不变。  
+
+设置如下的模型参数进行训练，得到的最终准确率为97.8%。
+```python
+mix_model = MLPMixer(in_channels=1, image_size=28, patch_size=4, num_classes=10,
+                        dim=64, depth=4, token_dim=64, channel_dim=128, dropout=0.2).to(device)
+my_optimizer = torch.optim.SGD(mix_model.parameters(), lr=0.03, momentum=0.6)
+my_criterion = nn.CrossEntropyLoss()
+```
+
+<center>
+<img src="../res/mlp_mixer_result.png" width="600">
+</center>
+
+## 实验心得
+- 当隐藏层的神经元较少时，模型的表示能力较弱，容易欠拟合导致准确率较低。
+- 当隐藏层的神经元较多时，模型的表示能力更强，但模型训练时间相应变长，且容易过拟合，也会导致准确率不高。
+- 隐藏层的深度需要适当设置，太深会导致梯度消失，模型无法训练。
+- 学习率的调整对模型的训练效果有很大的影响，合适的学习率可以使模型更快收敛。但学习率过大会导致结果震荡，过小会导致收敛速度慢。

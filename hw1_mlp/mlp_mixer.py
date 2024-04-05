@@ -38,7 +38,7 @@ class MixerBlock(nn.Module):
             MlpBlock(num_patch, token_dim, dropout),
             Rearrange('b d n -> b n d')  # 转置回来
         )
-        # channel_mixing，在每个patch/token的个个维度上进行mixing
+        # channel_mixing，在每个patch/token的各个维度上进行mixing
         self.channel_mix = nn.Sequential(
             nn.LayerNorm(dim),
             MlpBlock(dim, channel_dim, dropout),
@@ -99,7 +99,7 @@ if __name__ == "__main__":
 
     out_img = model(img)
 
-    print("Shape of out :", out_img.shape)  # [B, in_channels, image_size, image_size]
+    print("Shape of out :", out_img.shape)
 
 
 
