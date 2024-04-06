@@ -1,4 +1,5 @@
 # DeepLearning
 respority for deep learning course
 
-1. mlp & mlp mixer
+1. MNIST handwritten digits classification with MLPs
+2. CIFAR-10 object classification with CNNs
