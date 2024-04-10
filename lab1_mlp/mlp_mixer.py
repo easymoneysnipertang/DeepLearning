@@ -86,7 +86,6 @@ class MLPMixer(nn.Module):
         return self.mlp_head(x)
 
 
-
 if __name__ == "__main__":
     img = torch.ones([32, 1, 28, 28])
 
