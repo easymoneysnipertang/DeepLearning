@@ -11,7 +11,8 @@ class Residual(nn.Module):
                                kernel_size=3, padding=1, stride=strides)
         self.conv2 = nn.Conv2d(num_channels, num_channels,
                                kernel_size=3, padding=1)
-        if use_1x1conv:
+        if use_1x1conv:  
+            # 用于修改图片大小(stride>1)和通道数
             self.conv3 = nn.Conv2d(input_channels, num_channels,
                                    kernel_size=1, stride=strides)
         else:
@@ -33,9 +34,11 @@ def resnet_block(input_channels, num_channels, num_residuals,
     blk = []
     for i in range(num_residuals):
         if i == 0 and not first_block:
+            # 图片大小减半，通道数翻倍
             blk.append(Residual(input_channels, num_channels,
                                 use_1x1conv=True, strides=2))
         else:
+            # 保持图片大小和通道数不变
             blk.append(Residual(num_channels, num_channels))
     return blk
 
@@ -44,16 +47,21 @@ class ResNet18(nn.Module):
     def __init__(self, in_channels, num_classes):
         super().__init__()
 
+        # 前两层和googlenet一样
         self.conv = nn.Conv2d(in_channels, 64, kernel_size=7, stride=2, padding=3)
         self.bn = nn.BatchNorm2d(64)
         self.relu = nn.ReLU()
         self.mp = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 
+        # ResNet的主体结构：4个模块，每个模块包含多个残差块
+        # 第一个模块块不改变通道数和大小
+        # 后面的每个模块将上一个模块的通道数翻倍，大小减半
         self.resnet_block1 = nn.Sequential(*resnet_block(64, 64, 2, first_block=True))
         self.resnet_block2 = nn.Sequential(*resnet_block(64, 128, 2))
         self.resnet_block3 = nn.Sequential(*resnet_block(128, 256, 2))
         self.resnet_block4 = nn.Sequential(*resnet_block(256, 512, 2))
         
+        # 全局平均池化层与全连接层
         self.global_avg_pool = nn.AdaptiveAvgPool2d((1, 1))
         self.fc = nn.Linear(512, num_classes)
 
