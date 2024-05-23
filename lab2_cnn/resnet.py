@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
+from torchsummary import summary
 
 
 class Residual(nn.Module):
@@ -99,9 +100,11 @@ class ResNet18(nn.Module):
 
 if __name__ == "__main__":
     net = ResNet18(3, 10)
-    X = torch.randn(size=(1, 3, 224, 224))
-    net(X)
-    output_shapes = net.get_layer_shapes()
-    for key, value in output_shapes.items():
-        print(f"{key}: {value}")
+    # X = torch.randn(size=(1, 3, 224, 224))
+    # net(X)
+    # output_shapes = net.get_layer_shapes()
+    # for key, value in output_shapes.items():
+    #     print(f"{key}: {value}")
+
+    summary(net, input_size=(3, 224, 224), device='cpu')
     
