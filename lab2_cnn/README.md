@@ -64,7 +64,7 @@ class ResNet18(nn.Module):
         self.fc = nn.Linear(512, num_classes)
 ```
 
-- 网络前两层和GoogleNet类似，使用7x7的卷积核，后接BatchNorm和ReLU激活函数，最好是MaxPool2d池化层。
+- 网络前两层和GoogleNet类似，使用7x7的卷积核，后接BatchNorm和ReLU激活函数，最后是MaxPool2d池化层。
 - 之后是4个ResNet Block，每个Block包含两个Residual Block，每个Residual Block包含两个卷积层和BatchNorm。
 - 最后是全局平均池化层和全连接层。
 
